@@ -582,11 +582,6 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 			$product->set_parent_id( $request['parent_id'] );
 		}
 
-		// Sold individually.
-		if ( isset( $request['sold_individually'] ) ) {
-			$product->set_sold_individually( $request['sold_individually'] );
-		}
-
 		// Stock status; stock_status has priority over in_stock.
 		if ( isset( $request['stock_status'] ) ) {
 			$stock_status = $request['stock_status'];
@@ -630,16 +625,6 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 					$stock_quantity += wc_stock_amount( $request['inventory_delta'] );
 					$product->set_stock_quantity( wc_stock_amount( $stock_quantity ) );
 				}
-
-				// Low stock amount.
-				// isset() returns false for value null, thus we need to check whether the value has been sent by the request.
-				if ( array_key_exists( 'low_stock_amount', $request->get_params() ) ) {
-					if ( null === $request['low_stock_amount'] ) {
-						$product->set_low_stock_amount( '' );
-					} else {
-						$product->set_low_stock_amount( wc_stock_amount( $request['low_stock_amount'] ) );
-					}
-				}
 			} else {
 				// Don't manage stock.
 				$product->set_manage_stock( 'no' );
@@ -649,38 +634,6 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 			}
 		} elseif ( ! $product->is_type( 'variable' ) ) {
 			$product->set_stock_status( $stock_status );
-		}
-
-		// Upsells.
-		if ( isset( $request['upsell_ids'] ) ) {
-			$upsells = array();
-			$ids     = $request['upsell_ids'];
-
-			if ( ! empty( $ids ) ) {
-				foreach ( $ids as $id ) {
-					if ( $id && $id > 0 ) {
-						$upsells[] = $id;
-					}
-				}
-			}
-
-			$product->set_upsell_ids( $upsells );
-		}
-
-		// Cross sells.
-		if ( isset( $request['cross_sell_ids'] ) ) {
-			$crosssells = array();
-			$ids        = $request['cross_sell_ids'];
-
-			if ( ! empty( $ids ) ) {
-				foreach ( $ids as $id ) {
-					if ( $id && $id > 0 ) {
-						$crosssells[] = $id;
-					}
-				}
-			}
-
-			$product->set_cross_sell_ids( $crosssells );
 		}
 
 		// Product categories.
@@ -720,49 +673,9 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 			$product = $this->save_taxonomy_terms( $product, $new_tags, 'tag' );
 		}
 
-		// Downloadable.
-		if ( isset( $request['downloadable'] ) ) {
-			$product->set_downloadable( $request['downloadable'] );
-		}
-
-		// Downloadable options.
-		if ( $product->get_downloadable() ) {
-
-			// Downloadable files.
-			if ( isset( $request['downloads'] ) && is_array( $request['downloads'] ) ) {
-				$product = $this->save_downloadable_files( $product, $request['downloads'] );
-			}
-
-			// Download limit.
-			if ( isset( $request['download_limit'] ) ) {
-				$product->set_download_limit( $request['download_limit'] );
-			}
-
-			// Download expiry.
-			if ( isset( $request['download_expiry'] ) ) {
-				$product->set_download_expiry( $request['download_expiry'] );
-			}
-		}
-
-		// Product url and button text for external products.
-		if ( $product->is_type( 'external' ) ) {
-			if ( isset( $request['external_url'] ) ) {
-				$product->set_product_url( $request['external_url'] );
-			}
-
-			if ( isset( $request['button_text'] ) ) {
-				$product->set_button_text( $request['button_text'] );
-			}
-		}
-
 		// Save default attributes for variable products.
 		if ( $product->is_type( 'variable' ) ) {
 			$product = $this->save_default_attributes( $product, $request );
-		}
-
-		// Set children for a grouped product.
-		if ( $product->is_type( 'grouped' ) && isset( $request['grouped_products'] ) ) {
-			$product->set_children( $request['grouped_products'] );
 		}
 
 		// Check for featured/gallery images, upload it and set it.
@@ -812,8 +725,6 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 	 * @return array
 	 */
 	public function get_item_schema() {
-		$weight_unit_label    = I18nUtil::get_weight_unit_label( get_option( 'woocommerce_weight_unit', 'kg' ) );
-		$dimension_unit_label = I18nUtil::get_dimensions_unit_label( get_option( 'woocommerce_dimension_unit', 'cm' ) );
 		$schema               = array(
 			'$schema'    => 'http://json-schema.org/draft-04/schema#',
 			'title'      => $this->post_type,
@@ -965,79 +876,7 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 					'type'        => 'integer',
 					'context'     => array( 'view', 'edit' ),
 					'readonly'    => true,
-				),
-				'virtual'               => array(
-					'description' => __( 'If the product is virtual.', 'woocommerce' ),
-					'type'        => 'boolean',
-					'default'     => false,
-					'context'     => array( 'view', 'edit' ),
-				),
-				'downloadable'          => array(
-					'description' => __( 'If the product is downloadable.', 'woocommerce' ),
-					'type'        => 'boolean',
-					'default'     => false,
-					'context'     => array( 'view', 'edit' ),
-				),
-				'downloads'             => array(
-					'description' => __( 'List of downloadable files.', 'woocommerce' ),
-					'type'        => 'array',
-					'context'     => array( 'view', 'edit' ),
-					'items'       => array(
-						'type'       => 'object',
-						'properties' => array(
-							'id'   => array(
-								'description' => __( 'File ID.', 'woocommerce' ),
-								'type'        => 'string',
-								'context'     => array( 'view', 'edit' ),
-							),
-							'name' => array(
-								'description' => __( 'File name.', 'woocommerce' ),
-								'type'        => 'string',
-								'context'     => array( 'view', 'edit' ),
-							),
-							'file' => array(
-								'description' => __( 'File URL.', 'woocommerce' ),
-								'type'        => 'string',
-								'context'     => array( 'view', 'edit' ),
-							),
-						),
-					),
-				),
-				'download_limit'        => array(
-					'description' => __( 'Number of times downloadable files can be downloaded after purchase.', 'woocommerce' ),
-					'type'        => 'integer',
-					'default'     => -1,
-					'context'     => array( 'view', 'edit' ),
-				),
-				'download_expiry'       => array(
-					'description' => __( 'Number of days until access to downloadable files expires.', 'woocommerce' ),
-					'type'        => 'integer',
-					'default'     => -1,
-					'context'     => array( 'view', 'edit' ),
-				),
-				'external_url'          => array(
-					'description' => __( 'Product external URL. Only for external products.', 'woocommerce' ),
-					'type'        => 'string',
-					'format'      => 'uri',
-					'context'     => array( 'view', 'edit' ),
-				),
-				'button_text'           => array(
-					'description' => __( 'Product external button text. Only for external products.', 'woocommerce' ),
-					'type'        => 'string',
-					'context'     => array( 'view', 'edit' ),
-				),
-				'tax_status'            => array(
-					'description' => __( 'Tax status.', 'woocommerce' ),
-					'type'        => 'string',
-					'default'     => 'taxable',
-					'enum'        => array( 'taxable', 'shipping', 'none' ),
-					'context'     => array( 'view', 'edit' ),
-				),
-				'tax_class'             => array(
-					'description' => __( 'Tax class.', 'woocommerce' ),
-					'type'        => 'string',
-					'context'     => array( 'view', 'edit' ),
-				),
+				),				
 				'manage_stock'          => array(
 					'description' => __( 'Stock management at product level.', 'woocommerce' ),
 					'type'        => 'boolean',
@@ -1056,78 +895,10 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 					'enum'        => array_keys( wc_get_product_stock_status_options() ),
 					'context'     => array( 'view', 'edit' ),
 				),
-				'backorders'            => array(
-					'description' => __( 'If managing stock, this controls if backorders are allowed.', 'woocommerce' ),
-					'type'        => 'string',
-					'default'     => 'no',
-					'enum'        => array( 'no', 'notify', 'yes' ),
-					'context'     => array( 'view', 'edit' ),
-				),
-				'backorders_allowed'    => array(
-					'description' => __( 'Shows if backorders are allowed.', 'woocommerce' ),
-					'type'        => 'boolean',
-					'context'     => array( 'view', 'edit' ),
-					'readonly'    => true,
-				),
-				'backordered'           => array(
-					'description' => __( 'Shows if the product is on backordered.', 'woocommerce' ),
-					'type'        => 'boolean',
-					'context'     => array( 'view', 'edit' ),
-					'readonly'    => true,
-				),
 				'low_stock_amount'       => array(
 					'description' => __( 'Low Stock amount for the product.', 'woocommerce' ),
 					'type'        => array( 'integer', 'null' ),
 					'context'     => array( 'view', 'edit' ),
-				),
-				'sold_individually'     => array(
-					'description' => __( 'Allow one item to be bought in a single order.', 'woocommerce' ),
-					'type'        => 'boolean',
-					'default'     => false,
-					'context'     => array( 'view', 'edit' ),
-				),
-				'weight'                => array(
-					/* translators: %s: weight unit */
-					'description' => sprintf( __( 'Product weight (%s).', 'woocommerce' ), $weight_unit_label ),
-					'type'        => 'string',
-					'context'     => array( 'view', 'edit' ),
-				),
-				'dimensions'            => array(
-					'description' => __( 'Product dimensions.', 'woocommerce' ),
-					'type'        => 'object',
-					'context'     => array( 'view', 'edit' ),
-					'properties'  => array(
-						'length' => array(
-							/* translators: %s: dimension unit */
-							'description' => sprintf( __( 'Product length (%s).', 'woocommerce' ), $dimension_unit_label ),
-							'type'        => 'string',
-							'context'     => array( 'view', 'edit' ),
-						),
-						'width'  => array(
-							/* translators: %s: dimension unit */
-							'description' => sprintf( __( 'Product width (%s).', 'woocommerce' ), $dimension_unit_label ),
-							'type'        => 'string',
-							'context'     => array( 'view', 'edit' ),
-						),
-						'height' => array(
-							/* translators: %s: dimension unit */
-							'description' => sprintf( __( 'Product height (%s).', 'woocommerce' ), $dimension_unit_label ),
-							'type'        => 'string',
-							'context'     => array( 'view', 'edit' ),
-						),
-					),
-				),
-				'shipping_required'     => array(
-					'description' => __( 'Shows if the product need to be shipped.', 'woocommerce' ),
-					'type'        => 'boolean',
-					'context'     => array( 'view', 'edit' ),
-					'readonly'    => true,
-				),
-				'shipping_taxable'      => array(
-					'description' => __( 'Shows whether or not the product shipping is taxable.', 'woocommerce' ),
-					'type'        => 'boolean',
-					'context'     => array( 'view', 'edit' ),
-					'readonly'    => true,
 				),
 				'shipping_class'        => array(
 					'description' => __( 'Shipping class slug.', 'woocommerce' ),
@@ -1140,62 +911,9 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 					'context'     => array( 'view', 'edit' ),
 					'readonly'    => true,
 				),
-				'reviews_allowed'       => array(
-					'description' => __( 'Allow reviews.', 'woocommerce' ),
-					'type'        => 'boolean',
-					'default'     => true,
-					'context'     => array( 'view', 'edit' ),
-				),
-				'post_password'         => array(
-					'description' => __( 'Post password.', 'woocommerce' ),
-					'type'        => 'string',
-					'context'     => array( 'view', 'edit' ),
-				),
-				'average_rating'        => array(
-					'description' => __( 'Reviews average rating.', 'woocommerce' ),
-					'type'        => 'string',
-					'context'     => array( 'view', 'edit' ),
-					'readonly'    => true,
-				),
-				'rating_count'          => array(
-					'description' => __( 'Amount of reviews that the product have.', 'woocommerce' ),
-					'type'        => 'integer',
-					'context'     => array( 'view', 'edit' ),
-					'readonly'    => true,
-				),
-				'related_ids'           => array(
-					'description' => __( 'List of related products IDs.', 'woocommerce' ),
-					'type'        => 'array',
-					'items'       => array(
-						'type' => 'integer',
-					),
-					'context'     => array( 'view', 'edit' ),
-					'readonly'    => true,
-				),
-				'upsell_ids'            => array(
-					'description' => __( 'List of up-sell products IDs.', 'woocommerce' ),
-					'type'        => 'array',
-					'items'       => array(
-						'type' => 'integer',
-					),
-					'context'     => array( 'view', 'edit' ),
-				),
-				'cross_sell_ids'        => array(
-					'description' => __( 'List of cross-sell products IDs.', 'woocommerce' ),
-					'type'        => 'array',
-					'items'       => array(
-						'type' => 'integer',
-					),
-					'context'     => array( 'view', 'edit' ),
-				),
 				'parent_id'             => array(
 					'description' => __( 'Product parent ID.', 'woocommerce' ),
 					'type'        => 'integer',
-					'context'     => array( 'view', 'edit' ),
-				),
-				'purchase_note'         => array(
-					'description' => __( 'Optional note to send the customer after purchase.', 'woocommerce' ),
-					'type'        => 'string',
 					'context'     => array( 'view', 'edit' ),
 				),
 				'categories'            => array(
@@ -1307,12 +1025,6 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 						),
 					),
 				),
-				'has_options'     => array(
-					'description' => __( 'Shows if the product needs to be configured before it can be bought.', 'woocommerce' ),
-					'type'        => 'boolean',
-					'context'     => array( 'view', 'edit' ),
-					'readonly'    => true,
-				),
 				'attributes'            => array(
 					'description' => __( 'List of attributes.', 'woocommerce' ),
 					'type'        => 'array',
@@ -1391,20 +1103,6 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 						'type' => 'integer',
 					),
 					'readonly'    => true,
-				),
-				'grouped_products'      => array(
-					'description' => __( 'List of grouped products ID.', 'woocommerce' ),
-					'type'        => 'array',
-					'items'       => array(
-						'type' => 'integer',
-					),
-					'context'     => array( 'view', 'edit' ),
-					'readonly'    => true,
-				),
-				'menu_order'            => array(
-					'description' => __( 'Menu order, used to custom sort products.', 'woocommerce' ),
-					'type'        => 'integer',
-					'context'     => array( 'view', 'edit' ),
 				),
 				'meta_data'             => array(
 					'description' => __( 'Meta data.', 'woocommerce' ),
