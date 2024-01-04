@@ -69,9 +69,7 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 			$images[] = array(
 				'id'                => (int) $attachment_id,
 				'date_created'      => wc_rest_prepare_date_response( $attachment_post->post_date, false ),
-				'date_created_gmt'  => wc_rest_prepare_date_response( strtotime( $attachment_post->post_date_gmt ) ),
 				'date_modified'     => wc_rest_prepare_date_response( $attachment_post->post_modified, false ),
-				'date_modified_gmt' => wc_rest_prepare_date_response( strtotime( $attachment_post->post_modified_gmt ) ),
 				'src'               => current( $attachment ),
 				'name'              => get_the_title( $attachment_id ),
 				'alt'               => get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ),
@@ -838,26 +836,10 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 					'type'        => 'date-time',
 					'context'     => array( 'view', 'edit' ),
 				),
-				'date_on_sale_from_gmt' => array(
-					'description' => __( 'Start date of sale price, as GMT.', 'woocommerce' ),
-					'type'        => 'date-time',
-					'context'     => array( 'view', 'edit' ),
-				),
 				'date_on_sale_to'       => array(
 					'description' => __( "End date of sale price, in the site's timezone.", 'woocommerce' ),
 					'type'        => 'date-time',
 					'context'     => array( 'view', 'edit' ),
-				),
-				'date_on_sale_to_gmt'   => array(
-					'description' => __( "End date of sale price, in the site's timezone.", 'woocommerce' ),
-					'type'        => 'date-time',
-					'context'     => array( 'view', 'edit' ),
-				),
-				'price_html'            => array(
-					'description' => __( 'Price formatted in HTML.', 'woocommerce' ),
-					'type'        => 'string',
-					'context'     => array( 'view', 'edit' ),
-					'readonly'    => true,
 				),
 				'on_sale'               => array(
 					'description' => __( 'Shows if the product is on sale.', 'woocommerce' ),
@@ -988,20 +970,8 @@ class WC_REST_Products_Controller extends WC_REST_Products_V2_Controller {
 								'context'     => array( 'view', 'edit' ),
 								'readonly'    => true,
 							),
-							'date_created_gmt'  => array(
-								'description' => __( 'The date the image was created, as GMT.', 'woocommerce' ),
-								'type'        => 'date-time',
-								'context'     => array( 'view', 'edit' ),
-								'readonly'    => true,
-							),
 							'date_modified'     => array(
 								'description' => __( "The date the image was last modified, in the site's timezone.", 'woocommerce' ),
-								'type'        => 'date-time',
-								'context'     => array( 'view', 'edit' ),
-								'readonly'    => true,
-							),
-							'date_modified_gmt' => array(
-								'description' => __( 'The date the image was last modified, as GMT.', 'woocommerce' ),
 								'type'        => 'date-time',
 								'context'     => array( 'view', 'edit' ),
 								'readonly'    => true,
